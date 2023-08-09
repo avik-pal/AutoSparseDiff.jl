@@ -1,6 +1,6 @@
-using AutoSparseAD
+using AutoSparseDiff
 using Test
 
-@testset "AutoSparseAD.jl" begin
+@testset "AutoSparseDiff.jl" begin
     # Write your tests here.
 end
