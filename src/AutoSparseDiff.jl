@@ -1,6 +1,6 @@
 module AutoSparseDiff
 
-using ArrayInterface, Reexport, SparseDiffTools
+using ArrayInterface, FiniteDiff, ForwardDiff, LinearAlgebra, Reexport, SparseDiffTools
 
 import ADTypes: AbstractADType
 import ArrayInterface: matrix_colors
@@ -21,6 +21,7 @@ include("finite_diff.jl")
 
 export NoSparsityDetection,
     SymbolicsSparsityDetection, JacPrototypeSparsityDetection, AutoSparsityDetection
-export sparse_jacobian, sparse_jacobian_cache, sparse_jacobian!
+export AutoSparseZygote
+export sparse_jacobian, sparse_jacobian_setup, sparse_jacobian!
 
 end

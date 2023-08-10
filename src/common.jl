@@ -15,6 +15,9 @@ const AbstractSparseFiniteDifferencesMode = Union{AutoSparseFiniteDiff}
 const AbstractFiniteDifferencesMode = Union{AutoFiniteDiff, AutoFiniteDifferences,
     AbstractSparseFiniteDifferencesMode}
 
+const AbstractSparseADType = Union{AbstractSparseReverseModeAD, AbstractSparseForwardModeAD,
+    AbstractSparseFiniteDifferencesMode}
+
 # Sparsity Detection
 abstract type AbstractMaybeSparsityDetection end
 abstract type AbstractSparsityDetection <: AbstractMaybeSparsityDetection end
@@ -34,7 +37,12 @@ end
 # Function Specifications
 function sparse_jacobian end
 function sparse_jacobian! end
-function sparse_jacobian_cache end
+function sparse_jacobian_setup end
+
+function __gradient end
+function __jacobian! end
 
 # Misc Functions
 __chunksize(::AutoSparseForwardDiff{C}) where {C} = C
+
+__f̂(f, x, cols) = dot(vec(f(x)), cols)
