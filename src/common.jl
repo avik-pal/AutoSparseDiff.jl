@@ -33,6 +33,7 @@ end
 
 # Function Specifications
 function sparse_jacobian end
+function sparse_jacobian! end
 function sparse_jacobian_cache end
 
 # Misc Functions
