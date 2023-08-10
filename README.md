@@ -37,13 +37,13 @@ end
 
 x = randn(Float32, 100);
 
-J_sparsity = Symbolics.jacobian_sparsity(f, similar(x), x);
+difftype = AutoSparseFiniteDiff()
 
 # Using setup + jacobian API
-sd = JacPrototypeSparsityDetection(J_sparsity, nothing)
+sd = SymbolicsSparsityDetection(nothing)
 
 cache = sparse_jacobian_setup(difftype, sd, g, x)
-J = similar(J_sparsity, eltype(x))
+J = similar(x, length(x), length(x))
 
 sparse_jacobian!(J, g, x, difftype, cache)
 
