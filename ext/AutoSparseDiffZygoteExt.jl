@@ -1,11 +1,16 @@
 module AutoSparseDiffZygoteExt
 
 using AutoSparseDiff, Zygote
-import AutoSparseDiff: __f̂, __jacobian!, __gradient, AutoSparseZygote, AutoZygote
+import AutoSparseDiff: __f̂,
+    __jacobian!, __gradient, __gradient!, AutoSparseZygote, AutoZygote
 
 function __gradient(::Union{AutoSparseZygote, AutoZygote}, f, x, cols)
     _, ∂x, _ = Zygote.gradient(__f̂, f, x, cols)
     return vec(∂x)
+end
+
+function __gradient!(::Union{AutoSparseZygote, AutoZygote}, f!, fx, x, cols)
+    return error("Zygote.jl cannot differentiate in-place (mutating) functions.")
 end
 
 # Zygote doesn't provide a way to accumulate directly into `J`. So we modify the code from
@@ -20,6 +25,10 @@ import Zygote: _jvec, _eyelike, _gradcopy!
         _gradcopy!(J[k, :], grad)
     end
     return J
+end
+
+function __jacobian!(J, ::Union{AutoSparseZygote, AutoZygote}, f!, fx, x)
+    return error("Zygote.jl cannot differentiate in-place (mutating) functions.")
 end
 
 end

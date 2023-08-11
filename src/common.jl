@@ -38,18 +38,13 @@ end
 abstract type AbstractMaybeSparseJacobianCache end
 
 """
-    sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f, x;
-        fx=nothing)
-
-Sequentially calls `sparse_jacobian_setup` and `sparse_jacobian!` to compute the Jacobian of
-`f` at `x`. Use this if the jacobian for `f` is computed exactly once. In all other
-cases, use `sparse_jacobian_setup` once to generate the cache and use `sparse_jacobian!`
-with the same cache to compute the jacobian.
-"""
-function sparse_jacobian end
-
-"""
     sparse_jacobian!(J::AbstractMatrix, f, x, ad, cache::AbstractMaybeSparseJacobianCache)
+    sparse_jacobian!(J::AbstractMatrix, f!, fx, x, ad,
+        cache::AbstractMaybeSparseJacobianCache)
+    sparse_jacobian!(J::AbstractMatrix, ad::AbstractADType, sd::AbstractSparsityDetection,
+        f, x; fx=nothing)
+    sparse_jacobian!(J::AbstractMatrix, ad::AbstractADType, sd::AbstractSparsityDetection,
+        f!, fx, x)
 
 Inplace update the matrix `J` with the Jacobian of `f` at `x` using the AD backend `ad`.
 
@@ -60,6 +55,7 @@ function sparse_jacobian! end
 """
     sparse_jacobian_setup(ad::AbstractADType, sd::AbstractSparsityDetection, f, x;
         fx=nothing)
+    sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f!, fx, x)
 
 Takes the underlying AD backend `ad`, sparsity detection algorithm `sd`, function `f`,
 and input `x` and returns a cache object that can be used to compute the Jacobian.
@@ -72,8 +68,44 @@ A cache for computing the Jacobian of type `AbstractMaybeSparseJacobianCache`.
 """
 function sparse_jacobian_setup end
 
+"""
+    sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f, x;
+        fx=nothing)
+    sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f!, fx, x)
+
+Sequentially calls `sparse_jacobian_setup` and `sparse_jacobian!` to compute the Jacobian of
+`f` at `x`. Use this if the jacobian for `f` is computed exactly once. In all other
+cases, use `sparse_jacobian_setup` once to generate the cache and use `sparse_jacobian!`
+with the same cache to compute the jacobian.
+"""
+function sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f, x;
+    fx=nothing)
+    cache = sparse_jacobian_setup(ad, sd, f, x; fx)
+    J = __init_𝒥(cache)
+    return sparse_jacobian!(J, f, x, ad, cache)
+end
+
+function sparse_jacobian(ad::AbstractADType, sd::AbstractSparsityDetection, f!, fx, x)
+    cache = sparse_jacobian_setup(ad, sd, f!, fx, x)
+    J = __init_𝒥(cache)
+    return sparse_jacobian!(J, f!, fx, x, ad, cache)
+end
+
+function sparse_jacobian!(J::AbstractMatrix, ad::AbstractADType,
+    sd::AbstractSparsityDetection, f, x; fx=nothing)
+    cache = sparse_jacobian_setup(ad, sd, f, x; fx)
+    return sparse_jacobian!(J, f, x, ad, cache)
+end
+
+function sparse_jacobian!(J::AbstractMatrix, ad::AbstractADType,
+    sd::AbstractSparsityDetection, f!, fx, x)
+    cache = sparse_jacobian_setup(ad, sd, f!, fx, x)
+    return sparse_jacobian!(J, f!, fx, x, ad, cache)
+end
+
 ## Internal
 function __gradient end
+function __gradient! end
 function __jacobian! end
 
 function __init_𝒥 end

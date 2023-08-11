@@ -92,11 +92,7 @@ for difftype in (AutoSparseZygote(), AutoZygote(), AutoSparseForwardDiff(),
     sd = JacPrototypeSparsityDetection(J_sparsity, nothing)
 
     cache = sparse_jacobian_setup(difftype, sd, g, x)
-    if !(difftype isa AutoSparseDiff.AbstractSparseADType)
-        J = similar(x, length(x), length(x))
-    else
-        J = similar(J_sparsity, eltype(x))
-    end
+    J = AutoSparseDiff.__init_𝒥(cache)
 
     sparse_jacobian!(J, g, x, difftype, cache)
 
@@ -112,6 +108,29 @@ for difftype in (AutoSparseZygote(), AutoZygote(), AutoSparseForwardDiff(),
     t₂ = @belapsed sparse_jacobian($difftype, $sd, $g, $x)
     @info "$(nameof(typeof(difftype)))() `sparse_jacobian` time: $(t₂)s"
 end
+
+for difftype in (AutoSparseForwardDiff(), AutoForwardDiff(), AutoSparseFiniteDiff(),
+    AutoFiniteDiff())
+    sd = JacPrototypeSparsityDetection(J_sparsity, nothing)
+    y = similar(x)
+
+    cache = sparse_jacobian_setup(difftype, sd, f, y, x)
+    J = AutoSparseDiff.__init_𝒥(cache)
+
+    sparse_jacobian!(J, f, y, x, difftype, cache)
+
+    @test J ≈ J_true
+
+    t₁ = @belapsed sparse_jacobian!($J, $f, $y, $x, $difftype, $cache)
+    @info "$(nameof(typeof(difftype)))() `sparse_jacobian!` time: $(t₁)s"
+
+    J = sparse_jacobian(difftype, sd, f, y, x)
+
+    @test J ≈ J_true
+
+    t₂ = @belapsed sparse_jacobian($difftype, $sd, $f, $y, $x)
+    @info "$(nameof(typeof(difftype)))() `sparse_jacobian` time: $(t₂)s"
+end
 ```
 
 ### Result
@@ -119,23 +138,30 @@ end
 ```julia
 [ Info: `ForwardDiff.jacobian` time: 3.0039e-5s
 [ Info: `Zygote.jacobian` time: 0.001191653s
-[ Info: AutoSparseZygote() `sparse_jacobian!` time: 7.8537e-5s
-[ Info: AutoSparseZygote() `sparse_jacobian` time: 0.000132876s
-[ Info: AutoZygote() `sparse_jacobian!` time: 0.001191635s
-[ Info: AutoZygote() `sparse_jacobian` time: 0.001188525s
-[ Info: AutoSparseForwardDiff() `sparse_jacobian!` time: 6.7638e-5s
-[ Info: AutoSparseForwardDiff() `sparse_jacobian` time: 0.000826335s
-[ Info: AutoForwardDiff() `sparse_jacobian!` time: 2.6899e-5s
-[ Info: AutoForwardDiff() `sparse_jacobian` time: 2.9569e-5s
-[ Info: AutoSparseFiniteDiff() `sparse_jacobian!` time: 2.5443333333333333e-6s
-[ Info: AutoSparseFiniteDiff() `sparse_jacobian` time: 5.6869e-5s
-[ Info: AutoFiniteDiff() `sparse_jacobian!` time: 3.3749e-5s
-[ Info: AutoFiniteDiff() `sparse_jacobian` time: 3.5709e-5s
+
+## Out of Place Version
+
+[ Info: AutoSparseZygote() `sparse_jacobian!` time: 7.0368e-5s
+[ Info: AutoSparseZygote() `sparse_jacobian` time: 0.000143805s
+[ Info: AutoZygote() `sparse_jacobian!` time: 0.001079399s
+[ Info: AutoZygote() `sparse_jacobian` time: 0.001092648s
+[ Info: AutoSparseForwardDiff() `sparse_jacobian!` time: 6.9178e-5s
+[ Info: AutoSparseForwardDiff() `sparse_jacobian` time: 0.000126426s
+[ Info: AutoForwardDiff() `sparse_jacobian!` time: 2.6629e-5s
+[ Info: AutoForwardDiff() `sparse_jacobian` time: 2.9779e-5s
+[ Info: AutoSparseFiniteDiff() `sparse_jacobian!` time: 2.6021111111111115e-6s
+[ Info: AutoSparseFiniteDiff() `sparse_jacobian` time: 6.6648e-5s
+[ Info: AutoFiniteDiff() `sparse_jacobian!` time: 3.4919e-5s
+[ Info: AutoFiniteDiff() `sparse_jacobian` time: 3.6929e-5s
+
+## Inplace Version
+
+[ Info: AutoSparseForwardDiff() `sparse_jacobian!` time: 9.55375e-7s
+[ Info: AutoSparseForwardDiff() `sparse_jacobian` time: 7.1688e-5s
+[ Info: AutoForwardDiff() `sparse_jacobian!` time: 1.5859e-5s
+[ Info: AutoForwardDiff() `sparse_jacobian` time: 1.945e-5s
+[ Info: AutoSparseFiniteDiff() `sparse_jacobian!` time: 1.3099000000000002e-6s
+[ Info: AutoSparseFiniteDiff() `sparse_jacobian` time: 6.3978e-5s
+[ Info: AutoFiniteDiff() `sparse_jacobian!` time: 5.024833333333333e-6s
+[ Info: AutoFiniteDiff() `sparse_jacobian` time: 6.2898e-6s
 ```
-
-## Documentation
-
-## Current Limitations
-
-* Functions are assumed to be out-of-place and accept only a single positional argument.
-* Assume `AbstractVector{<:Number}` output.
