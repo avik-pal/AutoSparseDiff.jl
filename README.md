@@ -1,5 +1,7 @@
 # AutoSparseDiff
 
+**DO NOT USE THIS PACKAGE. THIS IS MOSTLY A TESTBED BEFORE MOVING THINGS TO SparseDiffTools.jl**
+
 Fast Jacobian Computation using Matrix Coloring via:
 
 * Finite Differences

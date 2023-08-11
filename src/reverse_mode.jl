@@ -1,9 +1,36 @@
-function sparse_jacobian_setup(ad::AbstractReverseModeAD, sd::AbstractSparsityDetection, f,
-    x; dx=nothing)
-    return sd(ad, f, x)
+@concrete struct ReverseModeJacobianCache <: AbstractMaybeSparseJacobianCache
+    coloring
+    cache
+    jac_prototype
+    fx
+    x
 end
 
-function sparse_jacobian!(J::AbstractMatrix, f, x, ad, cache::MatrixColoringResult)
+function sparse_jacobian_setup(ad::AbstractReverseModeAD, sd::AbstractSparsityDetection, f,
+    x; fx=nothing)
+    fx = fx === nothing ? similar(f(x)) : fx
+    coloring_result = sd(ad, f, x)
+    jac_prototype = __getfield(coloring_result, Val(:jacobian_sparsity))
+    return ReverseModeJacobianCache(coloring_result, nothing, jac_prototype, fx, x)
+end
+
+function sparse_jacobian!(J::AbstractMatrix, f, x, ad, cache::ReverseModeJacobianCache)
+    if cache.coloring isa NoMatrixColoring
+        return __jacobian!(J, ad, f, x)
+    else
+        return __sparse_jacobian_reverse_impl!(J, f, x, ad, cache.coloring)
+    end
+end
+
+function sparse_jacobian(ad::AbstractReverseModeAD, sd::AbstractSparsityDetection, f, x;
+    fx=nothing)
+    cache = sparse_jacobian_setup(ad, sd, f, x; fx)
+    J = __init_𝒥(cache)
+    return sparse_jacobian!(J, f, x, ad, cache)
+end
+
+function __sparse_jacobian_reverse_impl!(J::AbstractMatrix, f, x, ad,
+    cache::MatrixColoringResult)
     for c in 1:maximum(cache.colorvec)
         @. cache.idx_vec = cache.colorvec == c
         gs = __gradient(ad, f, x, cache.idx_vec)
@@ -22,24 +49,4 @@ function sparse_jacobian!(J::AbstractMatrix, f, x, ad, cache::MatrixColoringResu
         end
     end
     return J
-end
-
-function sparse_jacobian!(J::AbstractMatrix, f, x, ad, cache::NoMatrixColoring)
-    return __jacobian!(J, ad, f, x)
-end
-
-function sparse_jacobian(ad::AbstractReverseModeAD, sd::AbstractSparsityDetection, f, x;
-    dx=nothing)
-    cache = sparse_jacobian_setup(ad, sd, f, x; dx)
-    if cache isa NoMatrixColoring
-        dx = dx === nothing ? similar(f(x)) : dx
-        J = similar(dx, length(dx), length(x))
-    else
-        if ad isa AbstractSparseReverseModeAD
-            J = similar(cache.jacobian_sparsity, eltype(x))
-        else
-            J = similar(x, size(cache.jacobian_sparsity))
-        end
-    end
-    return sparse_jacobian!(J, f, x, ad, cache)
 end
